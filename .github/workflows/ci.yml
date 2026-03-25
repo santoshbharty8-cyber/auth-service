@@ -46,6 +46,23 @@ jobs:
         run: |
           sudo apt-get install -y redis-tools
           redis-cli -h localhost ping
+      
+      - name: Set JWT Keys
+        run: |
+          mkdir -p keys
+
+          printf "%s" "${{ secrets.JWT_PRIVATE_KEY }}" > keys/private.pem
+          printf "%s" "${{ secrets.JWT_PUBLIC_KEY }}" > keys/public.pem
+
+          chmod 600 keys/private.pem
+          chmod 600 keys/public.pem
+
+      - name: Verify Keys
+        run: |
+          echo "Checking keys directory..."
+          ls -l keys
+          echo "First line of private key:"
+          head -n 1 keys/private.pem
 
       - name: Run Tests
         env:
