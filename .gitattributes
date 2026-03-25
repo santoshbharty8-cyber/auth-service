@@ -1,0 +1,12 @@
+# Force LF for all files
+* text=auto eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts (Linux)
+*.sh text eol=lf
+
+# Python
+*.py text eol=lf

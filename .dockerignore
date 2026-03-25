@@ -1,0 +1,72 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# Environment variables (never include secrets)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.gitlab-ci.yml
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test files
+tests/
+pytest_cache/
+.coverage
+htmlcov/
+
+# Local database
+*.db
+*.sqlite3
+
+# Documentation
+docs/
+
+# Docker files not needed in image
+docker-compose.yml
+docker-compose.override.yml
+
+# Node artifacts (if frontend exists)
+node_modules/
+
+# Temporary files
+tmp/
+temp/
+
+# Build artifacts
+dist/
+build/
+
+# Coverage reports
+.coverage.*
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local scripts
+scripts/

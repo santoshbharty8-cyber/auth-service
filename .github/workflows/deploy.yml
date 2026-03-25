@@ -1,0 +1,46 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1️⃣ Checkout code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # 2️⃣ Login to DockerHub
+      - name: Login to DockerHub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # 3️⃣ Build Docker Image
+      - name: Build Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/auth-service:latest .
+
+      # 4️⃣ Push Image
+      - name: Push Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
+
+      # 5️⃣ Install kubectl
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      # 6️⃣ Configure kubeconfig
+      - name: Setup kubeconfig
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+
+      # 7️⃣ Deploy to Kubernetes
+      - name: Deploy
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout restart deployment auth-service
