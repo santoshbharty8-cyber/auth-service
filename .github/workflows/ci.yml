@@ -9,6 +9,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -22,11 +33,23 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt || true
+          pip install pytest pytest-cov flake8
 
-      - name: Run Tests
-        run: pytest
 
       - name: Lint (optional but)
         run: |
           pip install flake8
           flake8 app || true
+      
+      - name: Debug Redis
+        run: |
+          sudo apt-get install -y redis-tools
+          redis-cli -h localhost ping
+
+      - name: Run Tests
+        env:
+          ENV: testing
+          DATABASE_URL: sqlite:///:memory:
+          REDIS_URL: redis://localhost:6379
+          OTEL_EXPORTER_ENDPOINT: http://localhost:4317
+        run: pytest --cov=app --cov-report=term
