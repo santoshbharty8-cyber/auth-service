@@ -49,7 +49,7 @@ jobs:
       - name: Run Tests
         env:
           ENV: testing
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379
           OTEL_EXPORTER_ENDPOINT: http://localhost:4317
         run: pytest --cov=app --cov-report=term
