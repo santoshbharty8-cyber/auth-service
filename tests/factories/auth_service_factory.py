@@ -68,6 +68,9 @@ class FakeDeviceRepo:
 class FakeTOTPRepo:
     def find_by_user_id(self, user_id):
         return None
+    
+    def find_by_user(self, user_id):
+        return None
 
 
 class FakeRecoveryCodeRepo:
