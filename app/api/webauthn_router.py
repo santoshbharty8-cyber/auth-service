@@ -90,10 +90,16 @@ def finish_login(
                 detail="Invalid passkey authentication"
             )               
 
+        ip = (
+            request.headers.get("x-forwarded-for")
+            or (request.client.host if request.client else None)
+            or "127.0.0.1"
+        )
+        
         return auth_service.create_session(
             user,
             user_agent=request.headers.get("user-agent"),
-            ip_address=request.client.host
+            ip_address=ip
         )
     except ValueError as e:
         # WebAuthn verification errors

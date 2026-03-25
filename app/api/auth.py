@@ -330,11 +330,17 @@ def google_callback(
 
     # LOGIN FLOW
     if flow == "login":
+        
+        ip_address = (
+            request.headers.get("x-forwarded-for")
+            or (request.client.host if request.client else None)
+            or "127.0.0.1"
+        )
 
         return service.handle_oauth_login(
             payload,
             request.headers.get("user-agent"),
-            request.client.host
+            ip_address
         )
 
     # LINK FLOW
@@ -551,10 +557,16 @@ def request_magic_link(
     service: AuthService = Depends(get_auth_service)
 ):
 
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
+    
     return service.request_magic_link(
         email,
         request.headers.get("user-agent"),
-        request.client.host
+        ip
     )
 
 
@@ -564,11 +576,16 @@ def magic_login(
     request: Request,
     service: AuthService = Depends(get_auth_service)
 ):
-
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
+    
     return service.login_with_magic_link(
         token,
         request.headers.get("user-agent"),
-        request.client.host
+        ip
     )
 
 
@@ -578,11 +595,16 @@ def approve_login(
     request: Request,
     service: AuthService = Depends(get_auth_service)
 ):
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
 
     return service.approve_login(
         request_id,
         request.headers.get("user-agent"),
-        request.client.host
+        ip
     )
 
 
