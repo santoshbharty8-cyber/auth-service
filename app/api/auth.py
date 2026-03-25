@@ -233,7 +233,11 @@ def request_otp(data: RequestOTPRequest, request: Request):
         )
     
     user_agent = request.headers.get("user-agent")
-    ip = request.client.host
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
     
     fingerprint = generate_device_fingerprint(user_agent, ip)
 
@@ -255,7 +259,11 @@ def login_with_otp(
 
     
     user_agent = request.headers.get("user-agent")
-    ip = request.client.host if request.client else None
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
     
     fingerprint = generate_device_fingerprint(user_agent, ip)
 
@@ -586,7 +594,11 @@ def request_phone_otp(data: RequestPhoneOTPRequest, request: Request):
 
     user_agent = request.headers.get("user-agent")
 
-    ip = request.client.host
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
 
     fingerprint = generate_device_fingerprint(
         user_agent,
@@ -617,7 +629,11 @@ def login_phone_otp(
 
     user_agent = request.headers.get("user-agent")
 
-    ip = request.client.host
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
 
     fingerprint = generate_device_fingerprint(
         user_agent,
@@ -764,7 +780,11 @@ def login_2fa(
 
     user_agent = request.headers.get("user-agent")
 
-    ip = request.client.host
+    ip = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
     service.mfa_challenge.delete_challenge(data.mfa_token)
 
     tokens = service.create_session(
@@ -854,7 +874,11 @@ def login_with_recovery_code(
     service.mfa_challenge.delete_challenge(data.mfa_token)
 
     user_agent = request.headers.get("user-agent")
-    ip_address = request.client.host
+    ip_address = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
 
     # -----------------------------
     # 5️⃣ Create session
