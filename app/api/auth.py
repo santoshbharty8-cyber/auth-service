@@ -74,7 +74,11 @@ def login(
     ):
     
     user_agent = request.headers.get("user-agent")
-    ip_address = request.client.host
+    ip_address = (
+        request.headers.get("x-forwarded-for")
+        or (request.client.host if request.client else None)
+        or "127.0.0.1"
+    )
 
     return service.login(
         email=body.email,
