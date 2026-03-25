@@ -428,11 +428,17 @@ async def github_callback(
                 "require_2fa": True,
                 "mfa_token": mfa_token
             }
+        
+        ip_address = (
+            request.headers.get("x-forwarded-for")
+            or (request.client.host if request.client else None)
+            or "127.0.0.1"
+        )
 
         return service.create_session(
             user=user,
             user_agent=request.headers.get("user-agent"),
-            ip_address=request.client.host
+            ip_address=ip_address
         )
 
     # LINK FLOW
