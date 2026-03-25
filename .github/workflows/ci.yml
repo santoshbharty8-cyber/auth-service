@@ -70,4 +70,4 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379
           OTEL_EXPORTER_ENDPOINT: http://localhost:4317
-        run: pytest --cov=app --cov-report=term
+        run: pytest --cov=app --cov-report=term-missing

@@ -80,18 +80,21 @@ graph TD
 ---
 
 ## 📁 Project Structure
-auth-service/
-    │
-    ├── app/ ---------> Application code
-    ├── k8s/ --------->           Kubernetes manifests
-    ├── keys/  --------->         JWT keys (NOT committed)
-    ├── .github/workflows/   ---------> CI/CD pipelines
-    ├── Dockerfile
-    ├── docker-compose.yml
-    ├── requirements.txt
-    ├── requirements-dev.txt
-    └── .env.example
 
+```markdown
+
+auth-service/
+├── app/                    # Application code
+├── k8s/                    # Kubernetes manifests
+├── keys/                   # JWT keys (NOT committed)
+├── .github/workflows/      # CI/CD pipelines
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── requirements-dev.txt
+└── .env.example
+
+``` 
 --- 
 ## ⚙️ Local Setup (Docker Compose)
 
