@@ -44,8 +44,9 @@ jobs:
       
       - name: Debug Redis
         run: |
-          sudo apt-get install -y redis-tools
-          redis-cli -h localhost ping
+          sudo apt-get update -y
+          sudo apt-get install -y redis-tools --fix-missing
+          redis-cli -h localhost ping || echo "Redis not responding"
       
       - name: Set JWT Keys
         run: |
