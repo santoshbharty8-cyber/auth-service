@@ -2,6 +2,7 @@ import uuid
 import app.api.webauthn_router as router_module
 from app.dependencies.services import get_webauthn_service
 from app.dependencies.auth_dependencies import get_auth_service
+from app.security.dependencies import get_current_user
 
 def test_webauthn_start_login_success(client, override_dep, monkeypatch):
     
@@ -174,3 +175,95 @@ def test_webauthn_finish_login_success(client, override_dep):
 
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+def test_webauthn_start_registration_success(client, override_dep, monkeypatch):
+    
+    class FakeUser:
+        def __init__(self):
+            self.id = uuid.uuid4()
+            self.email = "test@test.com"
+
+    # Mock current user dependency
+    override_dep(router_module.get_current_user, lambda: FakeUser())
+
+    # Mock WebAuthn Service
+    class MockService:
+        def start_registration(self, user):
+            return {"publicKey": {"challenge": "abc"}}
+
+    override_dep(get_webauthn_service, lambda: MockService())
+
+    response = client.get("/webauthn/register/start")
+
+    assert response.status_code == 200
+    assert "publicKey" in response.json()
+
+def test_webauthn_start_registration_service_error(client, override_dep, monkeypatch):
+    
+    class FakeUser:
+        def __init__(self):
+            self.id = uuid.uuid4()
+            self.email = "test@test.com"
+
+    # Mock current user dependency
+    override_dep(get_current_user, lambda: FakeUser())
+
+    # Mock WebAuthn Service to raise general exception
+    class MockService:
+        def start_registration(self, user):
+            raise RuntimeError("Registration failed")
+
+    override_dep(get_webauthn_service, lambda: MockService())
+
+    response = client.get("/webauthn/register/start")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Registration failed"
+
+def test_webauthn_finish_registration_success(client, override_dep, monkeypatch):
+    
+    class FakeUser:
+        def __init__(self):
+            self.id = uuid.uuid4()
+            self.email = "test@test.com"
+
+    # Mock current user dependency
+    override_dep(get_current_user, lambda: FakeUser())
+
+    # Mock WebAuthn Service
+    class MockService:
+        def finish_registration(self, user, credential):
+            return {"success": True}
+
+    override_dep(get_webauthn_service, lambda: MockService())
+
+    credential = {"type": "public-key", "id": "test"}
+
+    response = client.post("/webauthn/register/finish", json=credential)
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True}
+
+def test_webauthn_finish_registration_service_error(client, override_dep, monkeypatch):
+    
+    class FakeUser:
+        def __init__(self):
+            self.id = uuid.uuid4()
+            self.email = "test@test.com"
+
+    # Mock current user dependency
+    override_dep(get_current_user, lambda: FakeUser())
+
+    # Mock WebAuthn Service to raise general exception
+    class MockService:
+        def finish_registration(self, user, credential):
+            raise RuntimeError("Finish registration failed")
+
+    override_dep(get_webauthn_service, lambda: MockService())
+
+    credential = {"type": "public-key", "id": "test"}
+
+    response = client.post("/webauthn/register/finish", json=credential)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Finish registration failed"

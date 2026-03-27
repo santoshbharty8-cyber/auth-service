@@ -1,3 +1,4 @@
+import uuid
 from app.models.role import Role
 
 class RoleRepository:
@@ -12,7 +13,13 @@ class RoleRepository:
         return role
 
     def find_by_id(self, role_id):
+        if isinstance(role_id, str):
+            role_id = uuid.UUID(role_id)
+
         return self.db.query(Role).filter(Role.id == role_id).first()
 
     def find_by_name(self, name):
         return self.db.query(Role).filter(Role.name == name).first()
+
+    def list(self):
+        return self.db.query(Role).all()

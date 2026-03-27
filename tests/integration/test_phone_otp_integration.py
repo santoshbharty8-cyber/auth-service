@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from app.services.sms_service import SMSService
+
 def test_full_phone_otp_flow(client, real_auth_service, monkeypatch):
 
     import app.api.auth as auth_module
@@ -56,3 +59,42 @@ def test_full_phone_otp_flow(client, real_auth_service, monkeypatch):
 
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+
+def test_send_otp_success(monkeypatch):
+
+    # 🔥 fake Twilio message response
+    fake_message = SimpleNamespace(sid="SM123")
+
+    class FakeMessages:
+        def create(self, **kwargs):
+            # assert payload correctness (important)
+            assert "Your verification code is" in kwargs["body"]
+            assert kwargs["to"] == "+1234567890"
+            return fake_message
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            self.messages = FakeMessages()
+
+    # ✅ patch Twilio Client
+    monkeypatch.setattr(
+        "app.services.sms_service.Client",
+        FakeClient
+    )
+
+    # optional: patch settings
+    monkeypatch.setattr(
+        "app.services.sms_service.settings",
+        SimpleNamespace(
+            TWILIO_ACCOUNT_SID="sid",
+            TWILIO_AUTH_TOKEN="token",
+            TWILIO_PHONE_NUMBER="+1000000000"
+        )
+    )
+
+    service = SMSService()
+
+    result = service.send_otp("+1234567890", "123456")
+
+    assert result == "SM123"

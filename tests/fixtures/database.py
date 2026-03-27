@@ -17,13 +17,17 @@ TestingSessionLocal = sessionmaker(
 
 
 def get_test_db():
-
+    # Create tables ONCE
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    connection = engine.connect()
+    transaction = connection.begin()
+
+    db = TestingSessionLocal(bind=connection)
 
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        transaction.rollback()   # 🔥 key point
+        connection.close()

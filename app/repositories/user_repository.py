@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.orm import Session
 from app.models.user import User
 
@@ -10,6 +11,9 @@ class UserRepository:
         return self.db.query(User).filter(User.email == email).first()
     
     def find_by_id(self, user_id):
+        if isinstance(user_id, str):
+            user_id = uuid.UUID(user_id)
+
         return self.db.query(User).filter(User.id == user_id).first()
     
     def exists_by_email(self, email: str) -> bool:

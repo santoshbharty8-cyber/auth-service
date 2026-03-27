@@ -13,3 +13,6 @@ class PermissionRepository:
 
     def find_by_name(self, name):
         return self.db.query(Permission).filter(Permission.name == name).first()
+
+    def list(self):
+        return self.db.query(Permission).all()

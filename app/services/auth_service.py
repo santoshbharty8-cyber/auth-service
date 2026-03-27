@@ -960,3 +960,4 @@ class AuthService:
             user_agent=user_agent,
             ip_address=ip_address
         )
+    

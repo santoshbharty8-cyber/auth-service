@@ -1,3 +1,4 @@
+import importlib
 import os
 import sys
 import pytest
@@ -21,9 +22,15 @@ from tests.fixtures.database import get_test_db
 from tests.fixtures.client import get_test_client
 from tests.factories.auth_service_factory import create_auth_service
 
-# -----------------------------
+
+# @pytest.fixture
+# def app():
+#     from app.main import app
+#     return app
+
+
 # Disable rate limiting (global)
-# -----------------------------
+
 @pytest.fixture(autouse=True)
 def disable_rate_limit():
     app.state.rate_limit_disabled = True
@@ -137,6 +144,12 @@ def real_auth_service():
     yield service
 
     app.dependency_overrides.pop(get_auth_service, None)
+
+@pytest.fixture
+def reset_modules():
+    yield
+    import app.services.recovery_code_service as module
+    importlib.reload(module)
     
 # -----------------------------
 # Pytest plugins

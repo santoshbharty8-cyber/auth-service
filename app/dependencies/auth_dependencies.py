@@ -23,7 +23,7 @@ from app.auth_providers.password_provider import PasswordAuthProvider
 from app.auth_providers.otp_provider import OTPAuthProvider
 from app.auth_providers.google_oauth_provider import GoogleOAuthProvider
 from app.auth_providers.github_oauth_provider import GitHubOAuthProvider
-from app.auth_providers.microsoft_oauth_provider import MicrosoftOAuthProvider
+# from app.auth_providers.microsoft_oauth_provider import MicrosoftOAuthProvider
 
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
@@ -69,10 +69,10 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
         GitHubOAuthProvider(user_repo, oauth_repo)
     )
     
-    provider_registry.register(
-        "microsoft_oauth",
-        MicrosoftOAuthProvider()
-    )
+    # provider_registry.register(
+    #     "microsoft_oauth",
+    #     MicrosoftOAuthProvider()
+    # )
 
     # -----------------------------
     # AuthService

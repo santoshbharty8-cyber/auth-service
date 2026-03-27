@@ -1,5 +1,6 @@
 import json
 import uuid
+from types import SimpleNamespace
 
 
 def test_magic_login_full_flow(client, real_auth_service, monkeypatch):
@@ -35,9 +36,19 @@ def test_magic_login_full_flow(client, real_auth_service, monkeypatch):
     assert response.status_code == 200
 
 
-def test_approve_login_success(client, real_auth_service, redis_client):
+def test_approve_login_success(client, real_auth_service, redis_client, monkeypatch):
+
+    user = SimpleNamespace(id="123")
+
+    # ✅ FIX: return valid user
+    monkeypatch.setattr(
+        real_auth_service.user_repo,
+        "find_by_id",
+        lambda uid: user
+    )
 
     real_auth_service.require_2fa = lambda user: False
+
     real_auth_service.create_session = lambda *args, **kwargs: {
         "access_token": "token"
     }
@@ -58,6 +69,7 @@ def test_approve_login_success(client, real_auth_service, redis_client):
     response = client.get(f"/auth/approve-login?request_id={request_id}")
 
     assert response.status_code == 200
+    assert response.json()["access_token"] == "token"
     
 def test_approve_login_invalid(client):
 

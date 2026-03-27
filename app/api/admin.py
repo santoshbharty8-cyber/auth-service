@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -59,7 +61,7 @@ def create_permission(
 
 @router.post("/roles/{role_id}/permissions")
 def attach_permission(
-    role_id: str,
+    role_id: uuid.UUID,
     request: AssignPermissionToRole,
     db: Session = Depends(get_db),
     current_user=Depends(require_permission("admin:manage"))
@@ -81,7 +83,7 @@ def attach_permission(
 
 @router.post("/users/{user_id}/roles")
 def assign_role_to_user(
-    user_id: str,
+    user_id: uuid.UUID,
     request: AssignRoleToUser,
     db: Session = Depends(get_db),
     current_user=Depends(require_permission("admin:manage"))
@@ -100,3 +102,19 @@ def assign_role_to_user(
     db.commit()
 
     return {"message": "Role assigned"}
+
+@router.get("/roles")
+def list_roles(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_permission("admin:manage"))
+):
+    role_repo = RoleRepository(db)
+    return role_repo.list()
+
+@router.get("/permissions")
+def list_permissions(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_permission("admin:manage"))
+):
+    perm_repo = PermissionRepository(db)
+    return perm_repo.list()
