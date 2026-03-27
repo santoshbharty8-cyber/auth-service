@@ -479,6 +479,9 @@ class AuthService:
     
     
     def require_2fa(self, user):
+        
+        if not user:
+            return False        
 
         credential = self.totp_repo.find_by_user(user.id)
 
