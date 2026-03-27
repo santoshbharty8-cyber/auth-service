@@ -90,3 +90,4 @@ secret.yaml
 # GIT
 # ===============================
 .git/
+scripts/
