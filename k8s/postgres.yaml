@@ -7,13 +7,16 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 2Gi   # 🔥 increased for safety
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
+  labels:
+    app: postgres
+
 spec:
   replicas: 1
 
@@ -30,6 +33,7 @@ spec:
       containers:
         - name: postgres
           image: postgres:15
+          imagePullPolicy: IfNotPresent
 
           ports:
             - containerPort: 5432
@@ -53,23 +57,58 @@ spec:
                   name: auth-secret
                   key: POSTGRES_PASSWORD
 
+          # ✅ HEALTH CHECKS (VERY IMPORTANT)
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          # ✅ RESOURCES
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # ✅ STORAGE (correct PG path)
           volumeMounts:
-            - mountPath: /var/lib/postgresql/data
-              name: postgres-storage
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+
+          # ✅ SECURITY (non-root best effort)
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
 
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: postgres-pvc
 
+      terminationGracePeriodSeconds: 30
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres
+
 spec:
+  type: ClusterIP   # 🔥 internal only
+
   selector:
     app: postgres
 
   ports:
     - port: 5432
+      targetPort: 5432

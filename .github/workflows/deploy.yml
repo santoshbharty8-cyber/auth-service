@@ -1,46 +1,76 @@
-name: Deploy to Kubernetes
+name: CD Pipeline (Deploy to Kubernetes)
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-
       # 1️⃣ Checkout code
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2️⃣ Login to DockerHub
+      # 2️⃣ Set image tag (🔥 immutable)
+      - name: Set image tag
+        id: vars
+        run: echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      # 3️⃣ Login to DockerHub
       - name: Login to DockerHub
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # 3️⃣ Build Docker Image
+      # 4️⃣ Build Docker Image (SHA tag)
       - name: Build Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/auth-service:latest .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/auth-service:${IMAGE_TAG} .
 
-      # 4️⃣ Push Image
+      # 5️⃣ Push Docker Image
       - name: Push Image
         run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/auth-service:${IMAGE_TAG}
+
+      # 🔥 (Optional) Tag latest for convenience
+      - name: Tag latest
+        run: |
+          docker tag ${{ secrets.DOCKER_USERNAME }}/auth-service:${IMAGE_TAG} ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
 
-      # 5️⃣ Install kubectl
+      # 6️⃣ Setup kubectl
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
 
-      # 6️⃣ Configure kubeconfig
+      # 7️⃣ Configure kubeconfig
       - name: Setup kubeconfig
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
           export KUBECONFIG=$PWD/kubeconfig
 
-      # 7️⃣ Deploy to Kubernetes
-      - name: Deploy
+      # 8️⃣ Deploy manifests (idempotent)
+      - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f k8s/
-          kubectl rollout restart deployment auth-service
+          kubectl --kubeconfig=kubeconfig apply -f k8s/
+
+      # 9️⃣ Update image (🔥 no YAML edit needed)
+      - name: Update Deployment Image
+        run: |
+          kubectl --kubeconfig=kubeconfig set image deployment/auth-service \
+          auth=${{ secrets.DOCKER_USERNAME }}/auth-service:${IMAGE_TAG}
+
+      # 🔟 Verify rollout (CRITICAL)
+      - name: Verify rollout
+        run: |
+          kubectl --kubeconfig=kubeconfig rollout status deployment/auth-service
+
+      # 1️⃣1️⃣ Debug on failure (optional but useful)
+      - name: Debug if failed
+        if: failure()
+        run: |
+          kubectl --kubeconfig=kubeconfig get pods
+          kubectl --kubeconfig=kubeconfig describe deployment auth-service

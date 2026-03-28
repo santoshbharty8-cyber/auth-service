@@ -1,46 +1,60 @@
-# ---------- Base image ----------
-FROM python:3.11-slim
+# ---------- STAGE 1: BUILD ----------
+FROM python:3.11-slim AS builder
 
-# ---------- ENV ----------
+WORKDIR /app
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# ---------- WORKDIR ----------
-WORKDIR /app
-
-# ---------- SYSTEM DEPENDENCIES ----------
+# Install build deps
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-    curl \
     gcc \
     libffi-dev \
     libssl-dev \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip tools
+# Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
 
-# ---------- INSTALL DEPENDENCIES ----------
+# Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ---------- COPY PROJECT ----------
+
+# ---------- STAGE 2: RUNTIME ----------
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install ONLY runtime deps
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages
+COPY --from=builder /install /usr/local
+
+# Copy app
 COPY . .
 
-# ---------- SECURITY (NON-ROOT USER) ----------
+# Create non-root user
 RUN useradd -m appuser
 USER appuser
 
-# ---------- EXPOSE ----------
 EXPOSE 8000
 
-# ---------- HEALTHCHECK (READINESS) ----------
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD curl --fail http://localhost:8000/ready || exit 1
 
-# ---------- START SERVER (ADVANCED PRODUCTION) ----------
+# Start server
 CMD ["sh", "-c", "\
 WORKERS=$((2 * $(nproc) + 1)) && \
 gunicorn app.main:app \
@@ -52,5 +66,4 @@ gunicorn app.main:app \
   --keep-alive 5 \
   --max-requests 1000 \
   --max-requests-jitter 50 \
-  --preload \
 "]

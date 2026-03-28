@@ -16,59 +16,76 @@ jobs:
           - 6379:6379
         options: >-
           --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
+          --health-interval=5s
+          --health-timeout=3s
           --health-retries=5
 
     steps:
+      # ✅ Checkout
       - name: Checkout
         uses: actions/checkout@v3
 
+      # ✅ Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
+      # ✅ Cache dependencies (🔥 speed boost)
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # ✅ Install dependencies
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -r requirements-dev.txt || true
-          pip install pytest-cov flake8
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-
-      - name: Lint (optional but)
+      # ✅ Lint (fail on error)
+      - name: Lint
         run: |
           pip install flake8
-          flake8 app || true
-      
-      - name: Debug Redis
+          flake8 app
+
+      # ✅ Wait for Redis (cleaner than debug step)
+      - name: Wait for Redis
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y redis-tools --fix-missing
-          redis-cli -h localhost ping || echo "Redis not responding"
-      
-      - name: Set JWT Keys
+          for i in {1..10}; do
+            if redis-cli -h localhost ping; then
+              echo "Redis is ready"
+              break
+            fi
+            echo "Waiting for Redis..."
+            sleep 2
+          done
+
+      # ✅ Setup JWT Keys
+      - name: Setup JWT Keys
         run: |
           mkdir -p keys
+          echo "${{ secrets.JWT_PRIVATE_KEY }}" > keys/private.pem
+          echo "${{ secrets.JWT_PUBLIC_KEY }}" > keys/public.pem
+          chmod 600 keys/private.pem keys/public.pem
 
-          printf "%s" "${{ secrets.JWT_PRIVATE_KEY }}" > keys/private.pem
-          printf "%s" "${{ secrets.JWT_PUBLIC_KEY }}" > keys/public.pem
-
-          chmod 600 keys/private.pem
-          chmod 600 keys/public.pem
-
-      - name: Verify Keys
-        run: |
-          echo "Checking keys directory..."
-          ls -l keys
-          echo "First line of private key:"
-          head -n 1 keys/private.pem
-
+      # ✅ Run Tests with Coverage
       - name: Run Tests
         env:
           ENV: testing
           DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379
           OTEL_EXPORTER_ENDPOINT: http://localhost:4317
-        run: pytest --cov=app --cov-report=term-missing
+        run: |
+          pytest --cov=app --cov-report=term-missing --cov-report=xml
+
+      # ✅ Upload coverage report (optional but 🔥)
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml

@@ -2,9 +2,6 @@ version: "3.9"
 
 services:
 
-  # ===============================
-  # AUTH SERVICE (FASTAPI)
-  # ===============================
   auth-service:
     build: .
     container_name: auth-service
@@ -13,63 +10,71 @@ services:
     env_file:
       - .env.development
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - ./keys:/app/keys:ro   # 🔥 JWT keys
-    restart: always
+      - ./keys:/app/keys:ro
+    networks:
+      - auth-network
+    restart: unless-stopped
 
-  # ===============================
-  # POSTGRESQL
-  # ===============================
   postgres:
     image: postgres:15
     container_name: postgres
-    environment:
-      POSTGRES_DB: myauthapp_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+    env_file:
+      - .env.development
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: always
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
 
-  # ===============================
-  # REDIS
-  # ===============================
   redis:
     image: redis:7
     container_name: redis
     ports:
       - "6379:6379"
-    restart: always
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
 
-  # ===============================
-  # PROMETHEUS
-  # ===============================
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./k8s/prometheus.yml:/etc/prometheus/prometheus.yml
-    restart: always
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - auth-network
+    restart: unless-stopped
 
-  # ===============================
-  # GRAFANA
-  # ===============================
   grafana:
     image: grafana/grafana
     container_name: grafana
     ports:
       - "3000:3000"
-    restart: always
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - auth-network
+    restart: unless-stopped
 
-
-# ===============================
-# VOLUMES
-# ===============================
 volumes:
   postgres_data:
+  grafana_data:
+
+networks:
+  auth-network:

@@ -1,72 +1,81 @@
-# Python cache
+# ---------- Python ----------
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environments
+# ---------- Virtual Environments ----------
 venv/
 .env/
 .venv/
 env/
 
-# Environment variables (never include secrets)
+# ---------- Environment Variables ----------
 .env
 .env.*
 !.env.example
 
-# Git
+# ---------- Git ----------
 .git
 .gitignore
+.github/
 .gitlab-ci.yml
 
-# IDE / Editors
+# ---------- IDE / Editors ----------
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# ---------- OS ----------
 .DS_Store
 Thumbs.db
 
-# Logs
+# ---------- Logs ----------
 *.log
 logs/
 
-# Test files
+# ---------- Testing ----------
 tests/
 pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.cache/
 
-# Local database
+# ---------- Type/Lint ----------
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# ---------- Databases ----------
 *.db
 *.sqlite3
 
-# Documentation
+# ---------- Docs ----------
 docs/
 
-# Docker files not needed in image
+# ---------- Docker ----------
 docker-compose.yml
 docker-compose.override.yml
 
-# Node artifacts (if frontend exists)
+# ---------- Node ----------
 node_modules/
 
-# Temporary files
+# ---------- Temp ----------
 tmp/
 temp/
 
-# Build artifacts
+# ---------- Build ----------
 dist/
 build/
 
-# Coverage reports
-.coverage.*
-.cache/
+# ---------- Binaries ----------
+*.so
+*.dll
+*.dylib
 
-# Jupyter
+# ---------- Jupyter ----------
 .ipynb_checkpoints/
 
-# Local scripts
+# ---------- Optional (ONLY if not used in runtime) ----------
 scripts/

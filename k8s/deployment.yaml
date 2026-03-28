@@ -2,9 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth-service
+  labels:
+    app: auth
 
 spec:
   replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 
   selector:
     matchLabels:
@@ -16,9 +24,19 @@ spec:
         app: auth
 
     spec:
+
+      # ✅ INIT CONTAINER (wait for DB)
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for db; sleep 2; done']
+
       containers:
         - name: auth
-          image: santosh138/auth-service:latest
+
+          # ❌ Avoid latest → use dynamic tag from CI/CD
+          image: santosh138/auth-service:IMAGE_TAG
+          imagePullPolicy: Always
 
           ports:
             - containerPort: 8000
@@ -27,13 +45,14 @@ spec:
             - secretRef:
                 name: auth-secret
 
-          # ✅ HEALTH CHECKS (correct place)
+          # ✅ HEALTH CHECKS
           livenessProbe:
             httpGet:
               path: /live
               port: 8000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 3
 
           readinessProbe:
             httpGet:
@@ -41,8 +60,17 @@ spec:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 5
+            failureThreshold: 3
 
-          # ✅ RESOURCES (correct place)
+          # ✅ STARTUP PROBE (prevents early kill)
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 5
+
+          # ✅ RESOURCES
           resources:
             requests:
               cpu: "100m"
@@ -51,14 +79,23 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
-          # ✅ VOLUME MOUNT (correct)
+          # ✅ LIFECYCLE HOOK (graceful shutdown)
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+
+          # ✅ VOLUME MOUNT (JWT KEYS)
           volumeMounts:
             - name: jwt-keys
               mountPath: /app/keys
               readOnly: true
 
-      # ✅ VOLUMES (ONLY secret here)
+      # ✅ VOLUMES
       volumes:
         - name: jwt-keys
           secret:
             secretName: jwt-secret
+
+      # ✅ GRACEFUL TERMINATION
+      terminationGracePeriodSeconds: 30
