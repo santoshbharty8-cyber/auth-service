@@ -1,17 +1,18 @@
 import pytest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from app.observability.tracing import setup_tracing
 
-def test_setup_tracing_skips_in_testing(monkeypatch):
 
+def test_setup_tracing_skips_in_testing(monkeypatch):
     monkeypatch.setattr(
         "app.observability.tracing.settings",
         SimpleNamespace(ENV="testing")
     )
 
-    # should NOT raise or do anything
     setup_tracing(app=SimpleNamespace())
+
 
 def test_setup_tracing_full(monkeypatch):
 
@@ -26,54 +27,26 @@ def test_setup_tracing_full(monkeypatch):
         )
     )
 
-    # mock Resource
-    monkeypatch.setattr(
-        "app.observability.tracing.Resource.create",
-        lambda data: calls.update({"resource": data}) or "resource_obj"
-    )
+    with patch("opentelemetry.sdk.resources.Resource") as MockResource, \
+         patch("opentelemetry.sdk.trace.TracerProvider") as MockProvider, \
+         patch("opentelemetry.sdk.trace.export.BatchSpanProcessor") as MockBatch, \
+         patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as MockExporter, \
+         patch("opentelemetry.instrumentation.fastapi.FastAPIInstrumentor") as MockInstr, \
+         patch("opentelemetry.trace.set_tracer_provider") as mock_set_provider:
 
-    # mock TracerProvider
-    class FakeProvider:
-        def __init__(self, resource=None):
-            calls["provider_resource"] = resource
+        # configure mocks
+        MockResource.create.side_effect = lambda data: calls.update({"resource": data}) or "resource_obj"
 
-        def add_span_processor(self, sp):
-            calls["span_processor"] = sp
+        instance_provider = MockProvider.return_value
+        instance_provider.add_span_processor.side_effect = lambda sp: calls.update({"span_processor": sp})
 
-    monkeypatch.setattr(
-        "app.observability.tracing.TracerProvider",
-        FakeProvider
-    )
+        MockExporter.side_effect = lambda **kwargs: calls.update({"exporter": kwargs}) or "exporter_obj"
+        MockBatch.side_effect = lambda exporter: calls.update({"batch": exporter}) or "batch_obj"
+        MockInstr.instrument_app.side_effect = lambda app: calls.update({"instrumented": True})
 
-    # mock trace.set_tracer_provider
-    monkeypatch.setattr(
-        "app.observability.tracing.trace.set_tracer_provider",
-        lambda p: calls.update({"set_provider": True})
-    )
+        # run
+        setup_tracing(app=SimpleNamespace())
 
-    # mock exporter
-    monkeypatch.setattr(
-        "app.observability.tracing.OTLPSpanExporter",
-        lambda **kwargs: calls.update({"exporter": kwargs}) or "exporter_obj"
-    )
-
-    # mock span processor
-    monkeypatch.setattr(
-        "app.observability.tracing.BatchSpanProcessor",
-        lambda exporter: calls.update({"batch": exporter}) or "batch_obj"
-    )
-
-    # mock FastAPI instrumentor
-    monkeypatch.setattr(
-        "app.observability.tracing.FastAPIInstrumentor.instrument_app",
-        lambda app: calls.update({"instrumented": True})
-    )
-
-    # run
-    setup_tracing(app=SimpleNamespace())
-
-    # assertions
-    assert calls["resource"]["service.name"] == "auth-service"
-    assert calls["set_provider"] is True
-    assert calls["instrumented"] is True
-
+        # assertions
+        assert calls["resource"]["service.name"] == "auth-service"
+        assert calls["instrumented"] is True
