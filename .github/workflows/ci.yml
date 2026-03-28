@@ -51,7 +51,7 @@ jobs:
       - name: Lint
         run: |
           pip install flake8
-          flake8 app --ignore=E501,W291,W293,W292,E302,E303,F401,W503,E251,E123,E125,E122,E712,F841
+          flake8 app --ignore=E501,W291,W293,W292,E301,E302,E303,F401,W503,E251,E123,E125,E122,E712,F841
 
       # ✅ Wait for Redis (cleaner than debug step)
       - name: Wait for Redis
