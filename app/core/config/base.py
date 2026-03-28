@@ -105,18 +105,32 @@ class BaseConfig(BaseSettings):
     
     @property
     def JWT_PRIVATE_KEY(self) -> str:
+        # ✅ 1. Try ENV (Railway / Production)
         key = os.getenv("JWT_PRIVATE_KEY")
-        if not key:
-            raise ValueError("JWT_PRIVATE_KEY not set")
-        return key.replace("\\n", "\n")
+        if key:
+            return key.replace("\\n", "\n")
+
+        # ✅ 2. Fallback to file (Local)
+        path = BASE_DIR / "keys/private.pem"
+        if path.exists():
+            return path.read_text()
+
+        raise ValueError("JWT private key not found in ENV or file")
 
 
     @property
     def JWT_PUBLIC_KEY(self) -> str:
+        # ✅ 1. Try ENV (Railway / Production)
         key = os.getenv("JWT_PUBLIC_KEY")
-        if not key:
-            raise ValueError("JWT_PUBLIC_KEY not set")
-        return key.replace("\\n", "\n")
+        if key:
+            return key.replace("\\n", "\n")
+
+        # ✅ 2. Fallback to file (Local)
+        path = BASE_DIR / "keys/public.pem"
+        if path.exists():
+            return path.read_text()
+
+        raise ValueError("JWT public key not found in ENV or file")
     # @property
     # def JWT_PRIVATE_KEY(self) -> str:
     #     path = BASE_DIR / "keys/private.pem"
