@@ -22,16 +22,16 @@ class BaseConfig(BaseSettings):
     # -------------------------
     # Database
     # -------------------------
-    DATABASE_URL: str
+    DATABASE_URL: Optional[str] = None
     
     TEST_DATABASE_URL: str = "sqlite:///./test.db"
 
     # -------------------------
     # Redis
     # -------------------------
-    REDIS_URL: str
+    REDIS_URL: Optional[str] = None
 
-    OTEL_EXPORTER_ENDPOINT: str
+    OTEL_EXPORTER_ENDPOINT: Optional[str] = None
     # -------------------------
     # CORS
     # -------------------------
@@ -102,19 +102,34 @@ class BaseConfig(BaseSettings):
     # -------------------------
     # JWT Keys
     # -------------------------
+    
     @property
     def JWT_PRIVATE_KEY(self) -> str:
-        path = BASE_DIR / "keys/private.pem"
-        if not path.exists():
-            raise FileNotFoundError("JWT private key not found")
-        return path.read_text()
+        key = os.getenv("JWT_PRIVATE_KEY")
+        if not key:
+            raise ValueError("JWT_PRIVATE_KEY not set")
+        return key.replace("\\n", "\n")
+
 
     @property
     def JWT_PUBLIC_KEY(self) -> str:
-        path = BASE_DIR / "keys/public.pem"
-        if not path.exists():
-            raise FileNotFoundError("JWT public key not found")
-        return path.read_text()
+        key = os.getenv("JWT_PUBLIC_KEY")
+        if not key:
+            raise ValueError("JWT_PUBLIC_KEY not set")
+        return key.replace("\\n", "\n")
+    # @property
+    # def JWT_PRIVATE_KEY(self) -> str:
+    #     path = BASE_DIR / "keys/private.pem"
+    #     if not path.exists():
+    #         raise FileNotFoundError("JWT private key not found")
+    #     return path.read_text()
+
+    # @property
+    # def JWT_PUBLIC_KEY(self) -> str:
+    #     path = BASE_DIR / "keys/public.pem"
+    #     if not path.exists():
+    #         raise FileNotFoundError("JWT public key not found")
+    #     return path.read_text()
 
     # -------------------------
     # Rate Limiting Toggle
