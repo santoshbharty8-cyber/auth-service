@@ -48,11 +48,11 @@ COPY . .
 RUN useradd -m appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8080
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-CMD curl --fail http://localhost:8000/ready || exit 1
+CMD curl --fail http://localhost:$PORT/ready || exit 1
 
 # Start server
 CMD ["sh", "-c", "gunicorn app.main:app \
