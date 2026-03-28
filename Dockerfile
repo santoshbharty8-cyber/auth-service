@@ -55,15 +55,10 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD curl --fail http://localhost:8000/ready || exit 1
 
 # Start server
-CMD ["sh", "-c", "\
-WORKERS=$((2 * $(nproc) + 1)) && \
-gunicorn app.main:app \
+CMD ["sh", "-c", "gunicorn app.main:app \
   -k uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 \
-  --workers $WORKERS \
+  --bind 0.0.0.0:$PORT \
+  --workers 1 \
+  --threads 2 \
   --timeout 30 \
-  --graceful-timeout 30 \
-  --keep-alive 5 \
-  --max-requests 1000 \
-  --max-requests-jitter 50 \
-"]
+  --keep-alive 5"]
