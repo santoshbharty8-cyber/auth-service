@@ -21,6 +21,7 @@ target_metadata = Base.metadata
 
 def get_database_url():
     url = os.getenv("DATABASE_URL")
+    print("🚨 USING DB URL:", url)
     if not url:
         raise ValueError("❌ DATABASE_URL not set")
     return url
