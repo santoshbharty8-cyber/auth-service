@@ -24,6 +24,13 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 def admin_route(
     current_user = Depends(require_permission("admin:access"))
 ):
+    """
+    Admin health check endpoint.
+
+    Requires `admin:access` permission.
+
+    Returns a simple confirmation message.
+    """
     return {"message": "Welcome Admin"}
 
 @router.post("/roles")
@@ -33,6 +40,14 @@ def create_role(
     current_user = Depends(require_permission("admin:manage")),
     
 ):
+    """
+    Create a new role.
+
+    Requires `admin:manage` permission.
+
+    Errors:
+    - 400 if role already exists
+    """
 
     role_repo = RoleRepository(db)
 
@@ -49,6 +64,14 @@ def create_permission(
     db: Session = Depends(get_db),
     current_user=Depends(require_permission("admin:manage"))
 ):
+    """
+    Create a new permission.
+
+    Requires `admin:manage` permission.
+
+    Errors:
+    - 400 if permission already exists
+    """
 
     perm_repo = PermissionRepository(db)
 
@@ -66,6 +89,18 @@ def attach_permission(
     db: Session = Depends(get_db),
     current_user=Depends(require_permission("admin:manage"))
 ):
+    """
+    Attach a permission to a role.
+
+    Requires `admin:manage` permission.
+
+    Notes:
+    - Adds permission to role
+    - No-op if already assigned (depends on DB constraints)
+
+    Errors:
+    - 404 if role or permission not found
+    """
 
     role_repo = RoleRepository(db)
     perm_repo = PermissionRepository(db)
@@ -88,6 +123,17 @@ def assign_role_to_user(
     db: Session = Depends(get_db),
     current_user=Depends(require_permission("admin:manage"))
 ):
+    """
+    Assign a role to a user.
+
+    Requires `admin:manage` permission.
+
+    Notes:
+    - User can have multiple roles
+
+    Errors:
+    - 404 if user or role not found
+    """
 
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
@@ -108,6 +154,11 @@ def list_roles(
     db: Session = Depends(get_db),
     current_user = Depends(require_permission("admin:manage"))
 ):
+    """
+    List all roles.
+
+    Requires `admin:manage` permission.
+    """
     role_repo = RoleRepository(db)
     return role_repo.list()
 
@@ -116,5 +167,10 @@ def list_permissions(
     db: Session = Depends(get_db),
     current_user = Depends(require_permission("admin:manage"))
 ):
+    """
+    List all permissions.
+
+    Requires `admin:manage` permission.
+    """
     perm_repo = PermissionRepository(db)
     return perm_repo.list()

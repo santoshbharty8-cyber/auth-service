@@ -2,6 +2,7 @@ from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.permission import Permission
 from app.models.user import User
+from app.core.config import settings
 
 
 def seed():
@@ -51,7 +52,7 @@ def seed():
     # -------------------------
     # Assign ADMIN Role to User
     # -------------------------
-    user_email = "santosh@example.com"
+    user_email = settings.ADMIN_EMAIL
 
     user = db.query(User).filter_by(email=user_email).first()
 

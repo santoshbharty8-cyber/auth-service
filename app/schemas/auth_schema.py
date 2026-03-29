@@ -66,6 +66,7 @@ class LoginOTPRequest(BaseModel):
 
 class OTPResponse(BaseModel):
     message: str
+    otp: str
 
 
 class LoginResponse(BaseModel):

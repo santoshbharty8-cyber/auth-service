@@ -553,28 +553,7 @@ def test_oauth_flows(monkeypatch):
     out2 = service.link_github_account(u.id, {"provider_user_id": "x", "email": "x@example.com"})
     assert out2["message"] == "GitHub account linked successfully"
 
-    # handle_microsoft_oauth_login existing oauth
-    oauth_repo.find_by_provider_user_id = lambda provider, pid: SimpleNamespace(user=u)
-    assert service.handle_microsoft_oauth_login({"provider_user_id": "y", "email": "y@example.com"}) == u
-
-    # existing email conflict
-    oauth_repo.find_by_provider_user_id = lambda provider, pid: None
-    with pytest.raises(HTTPException):
-        service.handle_microsoft_oauth_login({"provider_user_id": "y2", "email": "oauthuser@example.com"})
-
-    # fresh user created
-    nm = service.handle_microsoft_oauth_login({"provider_user_id": "y2", "email": "fresh@example.com"})
-    assert nm.email == "fresh@example.com"
-
-    # link_microsoft_account existing
-    oauth_repo.find_by_provider_user_id = lambda provider, pid: SimpleNamespace()
-    with pytest.raises(HTTPException):
-        service.link_microsoft_account(u.id, {"provider_user_id": "y", "email": "x@example.com"})
-
-    oauth_repo.find_by_provider_user_id = lambda provider, pid: None
-    out3 = service.link_microsoft_account(u.id, {"provider_user_id": "y", "email": "x3@example.com"})
-    assert out3["message"] == "Microsoft account linked successfully"
-
+    
 
 def test_magic_link_flows(monkeypatch):
     service, user_repo, device_repo, *_ = make_service(monkeypatch)

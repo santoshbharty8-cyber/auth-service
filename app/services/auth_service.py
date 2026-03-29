@@ -211,7 +211,7 @@ class AuthService:
 
         self.email_verification_repo.create(verification)
 
-        verification_link = f"https://yourapp.com/verify-email?token={verification_token}"
+        verification_link = f"{settings.BASE_URL}/verify-email?token={verification_token}"
 
         print("Verification link:", verification_link)
 
@@ -223,7 +223,8 @@ class AuthService:
 
         return {
             "user": created_user,
-            "verification_token": verification_token
+            "verification_token": verification_token,
+            "link": verification_link
         }        
     
     def refresh(self, refresh_token: str):
@@ -362,13 +363,14 @@ class AuthService:
         self.password_reset_repo.create(token)
 
         # send email here
-        reset_link = f"https://yourapp.com/reset-password?token={reset_token}"
+        reset_link = f"{settings.BASE_URL}/reset-password?token={reset_token}"
 
         print("Reset link:", reset_link)
 
         return {
             "message": "Reset email sent",
-            "reset_token": reset_token
+            "reset_token": reset_token,
+            "link": reset_link
         }   
 
 
@@ -463,7 +465,7 @@ class AuthService:
 
         self.email_verification_repo.create(verification)
 
-        verification_link = f"https://yourapp.com/verify-email?token={verification_token}"
+        verification_link = f"{settings.BASE_URL}/verify-email?token={verification_token}"
 
         print("Verification link:", verification_link)
 
@@ -474,7 +476,8 @@ class AuthService:
         )
 
         return {
-            "verification_token": verification_token
+            "verification_token": verification_token,
+            "link": verification_link
         }
     
     
@@ -724,101 +727,101 @@ class AuthService:
 
         return {"message": "GitHub account linked successfully"}
     
-    def start_microsoft_oauth(self, flow: str, user_id=None):
+    # def start_microsoft_oauth(self, flow: str, user_id=None):
 
-        state = OAuthHelper.generate_state()
+    #     state = OAuthHelper.generate_state()
 
-        code_verifier, challenge = OAuthHelper.generate_pkce()
+    #     code_verifier, challenge = OAuthHelper.generate_pkce()
 
-        OAuthHelper.store_state(
-            redis_client,
-            state,
-            {
-                "flow": flow,
-                "user_id": user_id,
-                "code_verifier": code_verifier
-            }
-        )
+    #     OAuthHelper.store_state(
+    #         redis_client,
+    #         state,
+    #         {
+    #             "flow": flow,
+    #             "user_id": user_id,
+    #             "code_verifier": code_verifier
+    #         }
+    #     )
 
-        url = (
-            f"{settings.MICROSOFT_AUTH_URL}"
-            f"?client_id={settings.MICROSOFT_CLIENT_ID}"
-            f"&response_type=code"
-            f"&redirect_uri={settings.MICROSOFT_REDIRECT_URI}"
-            f"&response_mode=query"
-            f"&scope=openid email profile"
-            f"&state={state}"
-            f"&code_challenge={challenge}"
-            f"&code_challenge_method=S256"
-        )
+    #     url = (
+    #         f"{settings.MICROSOFT_AUTH_URL}"
+    #         f"?client_id={settings.MICROSOFT_CLIENT_ID}"
+    #         f"&response_type=code"
+    #         f"&redirect_uri={settings.MICROSOFT_REDIRECT_URI}"
+    #         f"&response_mode=query"
+    #         f"&scope=openid email profile"
+    #         f"&state={state}"
+    #         f"&code_challenge={challenge}"
+    #         f"&code_challenge_method=S256"
+    #     )
 
-        return url
+    #     return url
     
-    def handle_microsoft_oauth_login(self, payload):
+    # def handle_microsoft_oauth_login(self, payload):
 
-        provider_user_id = payload["provider_user_id"]
+    #     provider_user_id = payload["provider_user_id"]
 
-        oauth_account = self.oauth_repo.find_by_provider_user_id(
-            "microsoft",
-            provider_user_id
-        )
+    #     oauth_account = self.oauth_repo.find_by_provider_user_id(
+    #         "microsoft",
+    #         provider_user_id
+    #     )
 
-        # already linked → login
-        if oauth_account:
-            return oauth_account.user
+    #     # already linked → login
+    #     if oauth_account:
+    #         return oauth_account.user
 
-        email = payload["email"]
+    #     email = payload["email"]
 
-        user = self.user_repo.find_by_email(email)
+    #     user = self.user_repo.find_by_email(email)
 
-        # existing user but OAuth not linked
-        if user:
-            raise HTTPException(
-                status_code=409,
-                detail="Account exists. Please link Microsoft login."
-            )
+    #     # existing user but OAuth not linked
+    #     if user:
+    #         raise HTTPException(
+    #             status_code=409,
+    #             detail="Account exists. Please link Microsoft login."
+    #         )
 
-        # auto-register new user
-        user = User(
-            email=email,
-            password_hash=None,
-            status="ACTIVE"
-        )
+    #     # auto-register new user
+    #     user = User(
+    #         email=email,
+    #         password_hash=None,
+    #         status="ACTIVE"
+    #     )
 
-        user = self.user_repo.create(user)
+    #     user = self.user_repo.create(user)
 
-        return user
+    #     return user
     
-    def link_microsoft_account(self, user_id, payload):
+    # def link_microsoft_account(self, user_id, payload):
 
-        provider_user_id = payload["provider_user_id"]
+    #     provider_user_id = payload["provider_user_id"]
 
-        existing = self.oauth_repo.find_by_provider_user_id(
-            "microsoft",
-            provider_user_id
-        )
+    #     existing = self.oauth_repo.find_by_provider_user_id(
+    #         "microsoft",
+    #         provider_user_id
+    #     )
 
-        if existing:
-            raise HTTPException(
-                status_code=409,
-                detail="Microsoft account already linked"
-            )
+    #     if existing:
+    #         raise HTTPException(
+    #             status_code=409,
+    #             detail="Microsoft account already linked"
+    #         )
 
-        oauth_account = OAuthAccount(
-            user_id=user_id,
-            provider="microsoft",
-            provider_user_id=provider_user_id,
-            email=payload["email"],
-            email_verified=True,
-            name=payload.get("name"),
-            picture=None
-        )
+    #     oauth_account = OAuthAccount(
+    #         user_id=user_id,
+    #         provider="microsoft",
+    #         provider_user_id=provider_user_id,
+    #         email=payload["email"],
+    #         email_verified=True,
+    #         name=payload.get("name"),
+    #         picture=None
+    #     )
 
-        self.oauth_repo.create(oauth_account)
+    #     self.oauth_repo.create(oauth_account)
 
-        return {
-            "message": "Microsoft account linked successfully"
-        }
+    #     return {
+    #         "message": "Microsoft account linked successfully"
+    #     }
     
     def request_magic_link(self, email: str, user_agent: str, ip_address: str):
 
@@ -839,11 +842,15 @@ class AuthService:
             ip_address
         )
 
-        login_link = f"https://yourapp.com/auth/magic-login?token={token}"
+        login_link = f"{settings.BASE_URL}/auth/magic-login?token={token}"
 
         print("Magic link:", login_link)
 
-        return {"message": "Magic login link sent"}
+        return {
+            "message": "Magic login link sent",
+            "token": token,
+            "link": login_link
+            }
     
     
     def login_with_magic_link(
@@ -911,7 +918,7 @@ class AuthService:
             })
         )
 
-        approval_link = f"https://yourapp.com/auth/approve-login?request_id={request_id}"
+        approval_link = f"{settings.BASE_URL}/auth/approve-login?request_id={request_id}"
 
         print("Approval link:", approval_link)
 

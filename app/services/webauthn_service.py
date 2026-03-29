@@ -16,7 +16,7 @@ from app.repositories.user_repository import UserRepository
 
 
 rp = PublicKeyCredentialRpEntity(
-    id="localhost",
+    id=os.getenv("RP_ID", "localhost"),
     name="Auth System"
 )
 

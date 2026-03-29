@@ -20,6 +20,7 @@ from app.observability.tracing import setup_tracing
 
 import app.core.startup_state as startup_state
 from app.core.database import engine
+from app.core.config import settings
 
 
 setup_logging()
@@ -49,7 +50,52 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Auth System",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    description=f"""
+    🛡️ Admin Access
+
+    Use the following credentials:
+
+    Email:   admin@test.com
+    Password: Admin@123
+
+
+    🧪 Quick Demo
+
+    🔐 Login
+    1. POST `/auth/login`
+    2. Copy `access_token`
+    3. Click **Authorize**
+    4. Call admin APIs:
+    - `/admin/`
+    - `/admin/roles`
+    - `/admin/permissions`
+
+    ---
+
+    🔗 OAuth Login
+
+    Login with Google:
+        {settings.BASE_URL}/auth/oauth/google/login
+    Login with GitHub: 
+        {settings.BASE_URL}/auth/oauth/github/login
+    
+    🚀 Live Demo
+
+    Open in browser:
+
+    {settings.BASE_URL}/webauthn/demo
+
+    ⚠️ WebAuthn cannot be tested inside Swagger
+
+    ---
+
+    ⚠️ Notes
+
+    - Admin routes require `admin:access` / `admin:manage`
+    - OAuth requires browser redirect (not Swagger)
+    - Demo credentials only (not for production use)
+    """
 )
 
 setup_tracing(app)

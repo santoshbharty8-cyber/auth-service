@@ -1,9 +1,92 @@
+"""
+🔐 Authentication API Module
+
+This module provides all core authentication functionalities for the Auth Service.
+
+It includes:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 Authentication
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- User Registration (Email & Password)
+- Login with JWT (Access + Refresh Tokens)
+- Logout (Token Invalidation / Blacklisting)
+- Get Current User (/auth/me)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 Email-Based Authentication
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Email OTP Login
+- OTP Verification
+- Password Reset (Forgot / Reset Password)
+- Email Verification Flow
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 Social Authentication (OAuth)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Google OAuth Login
+- GitHub OAuth Login
+- Account Linking (Google / GitHub)
+- OAuth Callback Handling
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ Security Features
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- JWT Authentication (RS256)
+- Refresh Token Rotation
+- Token Blacklisting
+- State Validation (OAuth CSRF Protection)
+- Rate Limiting (OTP Protection)
+- Secure Password Hashing (bcrypt/argon2)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ Demo Instructions (Swagger / Recruiter)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 Email Login:
+1. POST /auth/login
+2. Copy access_token
+3. Click "Authorize" in Swagger
+4. Call /auth/me
+
+📧 OTP Login:
+1. POST /auth/send-otp
+2. Use demo OTP or Mailtrap inbox
+3. POST /auth/verify-otp
+
+🔗 Google OAuth:
+👉 Open in browser:
+   /auth/oauth/google/login
+
+🔗 GitHub OAuth:
+👉 Open in browser:
+   /auth/oauth/github/login
+
+⚠️ NOTE:
+OAuth flows require browser redirects and cannot be completed inside Swagger UI.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏗️ Architecture Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Follows Service Layer + Repository Pattern
+- Stateless JWT authentication
+- OAuth provider abstraction (Google, GitHub)
+- Environment-based configuration (.env)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 Production Readiness
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Dockerized deployment (Railway)
+- PostgreSQL integration
+- Scalable design for microservices
+- Ready for Kubernetes deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
 from typing import Annotated, Union
-
-from google.oauth2 import id_token
-from google.auth.transport import requests
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import BackgroundTasks
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -14,12 +97,10 @@ from app.core.config import settings
 from app.cache.redis_client import redis_client
 from app.security.dependencies import get_current_user
 from app.security.device_fingerprint import generate_device_fingerprint
-from app.security.oauth_state import create_oauth_state, validate_oauth_state
 from app.security.oauth_helper import OAuthHelper
 
 from app.repositories.session_repository import SessionRepository
 from app.repositories.totp_repository import TOTPRepository
-from app.repositories.recovery_code_repository import RecoveryCodeRepository
 from app.dependencies.auth_dependencies import get_auth_service, get_recovery_code_service
 
 
@@ -27,11 +108,11 @@ from app.services.auth_service import AuthService
 from app.services.otp_service import OTPService
 from app.services.sms_service import SMSService
 from app.services.totp_service import TOTPService
+from app.services.email_service import EmailService
 from app.services.recovery_code_service import RecoveryCodeService
 
 from app.models import AuditLog, User
 from app.models.totp_credential import TOTPCredential
-from app.models.oauth_account import OAuthAccount
 from app.rbac.dependencies import require_permission
 from app.schemas.auth_schema import (
     RegisterRequest,
@@ -59,10 +140,35 @@ router = APIRouter()
 security = HTTPBearer()
 otp_service = OTPService()
 sms_service = SMSService()
-
+email_service = EmailService()
 
 # AUTHService = Annotated[AuthService, Depends(get_auth_service)]
 
+def get_google_login_description():
+    return f"""
+👉 **Click to Login with Google:**
+
+<a href="{settings.BASE_URL}/auth/oauth/google/login" target="_blank">
+🔗 Google Login
+</a>
+
+⚠️ Note:
+- Open in browser (not Swagger Try-it-out)
+- OAuth requires redirect flow
+"""
+
+def get_github_login_description():
+    return f"""
+👉 **Click to Login with GitHub:**
+
+<a href="{settings.BASE_URL}/auth/oauth/github/login" target="_blank">
+🔗 GitHub Login
+</a>
+
+⚠️ Note:
+- Open in browser (not Swagger Try-it-out)
+- OAuth requires redirect flow
+"""
 
 
 @router.post("/login", response_model=Union[TokenResponse, TwoFactorRequiredResponse])
@@ -72,6 +178,17 @@ def login(
     response: Response,
     service: AuthService = Depends(get_auth_service),
     ):
+    """
+    🔐 Authenticate user using email and password.
+
+    This endpoint validates user credentials and initiates a login session.
+    Depending on the user's security settings, it may either return JWT tokens
+    or require additional two-factor authentication (2FA).
+
+    Returns JWT tokens or requires 2FA if enabled.
+
+    Includes client metadata (IP, User-Agent) for security tracking.
+    """
     
     user_agent = request.headers.get("user-agent")
     ip_address = (
@@ -89,6 +206,18 @@ def login(
 
 @router.post("/register", response_model=RegisterResponse)
 def register(request: RegisterRequest, service: AuthService = Depends(get_auth_service),):
+    """
+    Register a new user.
+
+    Creates an account and returns a verification token.
+
+    Returns:
+    - id, email, status
+    - verification_token (for email verification)
+
+    Errors:
+    - 400 if email already exists or validation fails
+    """
 
     try:
         result = service.register(
@@ -110,6 +239,15 @@ def register(request: RegisterRequest, service: AuthService = Depends(get_auth_s
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(request: RefreshRequest, service: AuthService = Depends(get_auth_service),):
+    """
+    Refresh access token using a valid refresh token.
+
+    Returns new JWT tokens (access + refresh).
+
+    Notes:
+    - Supports token rotation
+    - Fails if token is expired or revoked
+    """
 
     return service.refresh(request.refresh_token)
 
@@ -119,6 +257,13 @@ def logout(
     service: AuthService = Depends(get_auth_service),
     credentials: HTTPAuthorizationCredentials = Depends(security),     
     ):
+    """
+    Logout user by invalidating refresh and access tokens.
+
+    Notes:
+    - Blacklists tokens
+    - Ends current session
+    """
     
     access_token = credentials.credentials
 
@@ -133,6 +278,11 @@ def get_me(
     response: Response,
     current_user = Depends(get_current_user)
     ):
+    """
+    Get current authenticated user.
+
+    Returns user profile from JWT context.
+    """
     return current_user
 
 @router.post("/force-logout-all")
@@ -140,6 +290,13 @@ def force_logout_all(
     service: AuthService = Depends(get_auth_service),
     current_user=Depends(get_current_user),
 ):
+    """
+    Force logout from all devices.
+
+    Notes:
+    - Revokes all active sessions
+    - Invalidates all tokens
+    """
 
     return service.force_logout_all(current_user.id)
 
@@ -148,6 +305,11 @@ def list_sessions(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """
+    List active user sessions.
+
+    Includes IP, device (User-Agent), and last activity.
+    """
     session_repo = SessionRepository(db)
     sessions = session_repo.find_active_by_user(current_user.id)
 
@@ -167,6 +329,12 @@ def revoke_session(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """
+    Revoke a specific session.
+
+    Errors:
+    - 403 if session does not belong to user
+    """
     session_repo = SessionRepository(db)
 
     session = session_repo.find_by_id(session_id)
@@ -183,17 +351,32 @@ def get_audit_logs(
     current_user: Annotated[User, Depends(require_permission("admin:access"))],
     db: Session = Depends(get_db),
 ):
+    """
+    Retrieve recent audit logs (admin only).
+
+    Includes security and authentication events.
+    """
     logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
 
     return logs
 
 @router.post("/password-reset/request")
 def request_password_reset(body: ResetRequest, service: AuthService = Depends(get_auth_service),):
+    """
+    Request password reset.
+
+    Sends reset link/token to registered email.
+    """
 
     return service.request_password_reset(body.email)
 
 @router.post("/password-reset/confirm")
 def reset_password(body: ResetConfirm, service: AuthService = Depends(get_auth_service),):
+    """
+    Reset password using a valid reset token.
+
+    Invalidates previous credentials.
+    """
 
     return service.reset_password(
         token=body.token,
@@ -202,6 +385,11 @@ def reset_password(body: ResetConfirm, service: AuthService = Depends(get_auth_s
 
 @router.post("/verify-email")
 def verify_email(body: VerifyEmail, service: AuthService = Depends(get_auth_service),):
+    """
+    Verify user email using verification token.
+
+    Activates user account.
+    """
 
     return service.verify_email(
         token=body.token
@@ -212,6 +400,11 @@ def resend_verification(
     request: ResendVerificationRequest,
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Resend email verification.
+
+    Returns verification token (demo/testing mode).
+    """
   
     result = service.resend_verification(request.email)    
 
@@ -221,7 +414,14 @@ def resend_verification(
     }
 
 @router.post("/request-otp", response_model=OTPResponse)
-def request_otp(data: RequestOTPRequest, request: Request):
+def request_otp(data: RequestOTPRequest, request: Request, background_tasks: BackgroundTasks,):
+    """
+    Send OTP to email.
+
+    Notes:
+    - Rate limited
+    - OTP tied to device fingerprint and IP
+    """
 
     identifier = f"email:{data.email}"
     
@@ -243,11 +443,9 @@ def request_otp(data: RequestOTPRequest, request: Request):
 
     otp = otp_service.generate_otp(identifier, fingerprint, ip)
 
-    # TODO: Send OTP via email service
-    # email_service.send_otp(data.email, otp)
-    print(otp)
+    background_tasks.add_task(email_service.send_otp_email, data.email, otp)
 
-    return OTPResponse(message="OTP sent successfully")
+    return OTPResponse(message="OTP sent successfully", otp=otp)
 
 
 @router.post("/login-otp", response_model=Union[LoginResponse, TwoFactorRequiredResponse])
@@ -256,6 +454,14 @@ def login_with_otp(
     request: Request,
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Login using email and OTP.
+
+    Returns JWT tokens or triggers 2FA if enabled.
+
+    Notes:
+    - Device-aware authentication
+    """
 
     
     user_agent = request.headers.get("user-agent")
@@ -295,8 +501,17 @@ def login_with_otp(
     return LoginResponse(**tokens)
 
 
-@router.get("/oauth/google/login")
+@router.get(
+    "/oauth/google/login",
+    summary="🔗 Google OAuth Login",
+    description=get_google_login_description()
+    )
 def google_login(service: AuthService = Depends(get_auth_service)):
+    """
+    Start Google OAuth login.
+
+    Redirects to Google with PKCE + state protection.
+    """
 
     url = service.start_google_oauth(flow="login")
 
@@ -304,12 +519,22 @@ def google_login(service: AuthService = Depends(get_auth_service)):
 
 @router.get("/oauth/google/callback")
 def google_callback(
-    code: str,
-    state: str,
     request: Request,
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Handle Google OAuth callback.
+
+    Supports:
+    - Login (create or fetch user)
+    - Account linking
+
+    Notes:
+    - Validates state (CSRF protection)
+    """
     
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
     state_data = OAuthHelper.consume_state(
         redis_client,
         state
@@ -320,6 +545,7 @@ def google_callback(
             status_code=400,
             detail="Invalid OAuth state"
         )
+
 
     payload = service.exchange_google_code(
         code,
@@ -355,21 +581,51 @@ def google_callback(
 
     raise HTTPException(400, "Invalid OAuth flow")
 
-@router.get("/oauth/google/link/start")
+@router.get(
+    "/oauth/google/link/start",
+    summary="🔗 Start Google Account Linking",
+    description="""
+    ⚠️ This endpoint starts Google OAuth linking.
+
+    👉 Steps:
+    1. Click "Try it out"
+    2. Execute request
+    3. Copy `redirect_url` from response
+    4. Open it in browser
+
+    NOTE: OAuth cannot be completed inside Swagger UI.
+    """
+    )
 def start_link_google(
     current_user: User = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Start Google account linking.
+
+    Returns redirect URL for browser-based OAuth flow.
+    """
 
     url = service.start_google_oauth(
         flow="link",
         user_id=str(current_user.id)
     )
 
-    return RedirectResponse(url)
+    return {
+        "redirect_url": url
+    }
 
-@router.get("/oauth/github/login")
+@router.get(
+    "/oauth/github/login",
+    summary="🔗 GitHub OAuth Login",
+    description=get_github_login_description()
+    )
 def github_login(service: AuthService = Depends(get_auth_service)):
+    """
+    Start GitHub OAuth login.
+
+    Redirects to GitHub authorization page.
+    """
 
     url = service.start_github_oauth(flow="login")
 
@@ -377,12 +633,22 @@ def github_login(service: AuthService = Depends(get_auth_service)):
 
 @router.get("/oauth/github/callback")
 async def github_callback(
-    code: str,
-    state: str,
     request: Request,
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Handle GitHub OAuth callback.
 
+    Supports:
+    - Login
+    - Account linking
+
+    Notes:
+    - Uses provider abstraction layer
+    """
+
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
     state_data = OAuthHelper.consume_state(redis_client, state)
 
     if not state_data:
@@ -462,93 +728,40 @@ async def github_callback(
         detail="Invalid OAuth flow"
     )
 
-@router.get("/oauth/github/link/start")
+@router.get(
+    "/oauth/github/link/start",
+    summary="🔗 Start GitHub Account Linking",
+    description="""
+    ⚠️ This endpoint starts GitHub OAuth linking.
+
+    👉 Steps:
+    1. Click "Try it out"
+    2. Execute request
+    3. Copy `redirect_url` from response
+    4. Open it in browser
+
+    NOTE: OAuth cannot be completed inside Swagger UI.
+    """
+    )
 def github_link_start(
     current_user: User = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Start GitHub account linking.
+
+    Returns redirect URL for OAuth flow.
+    """
 
     url = service.start_github_oauth(
         flow="link",
         user_id=str(current_user.id)
     )
 
-    return RedirectResponse(url)
+    return {
+        "redirect_url": url
+    }
 
-# Implementation pending
-# @router.get("/oauth/microsoft/login")
-# def microsoft_login(service: AuthService = Depends(get_auth_service)):
-
-#     url = service.start_microsoft_oauth(flow="login")
-
-#     return RedirectResponse(url)
-
-# @router.get("/oauth/microsoft/link/start")
-# def microsoft_link_start(
-#     current_user: User = Depends(get_current_user),
-#     service: AuthService = Depends(get_auth_service),
-# ):
-
-#     url = service.start_microsoft_oauth(
-#         flow="link",
-#         user_id=str(current_user.id)
-#     )
-
-#     return RedirectResponse(url)
-
-# @router.get("/oauth/microsoft/callback")
-# async def microsoft_callback(
-    # code: str,
-    # state: str,
-    # request: Request,
-    # service: AuthService = Depends(get_auth_service),
-# ):
-
-#     state_data = OAuthHelper.consume_state(redis_client, state)
-
-#     if not state_data:
-#         raise HTTPException(400, "Invalid OAuth state")
-
-#     provider = service.provider_registry.get_provider("microsoft_oauth")
-
-#     token_data = await provider.exchange_code(
-#         code,
-#         state_data["code_verifier"]
-#     )
-
-#     payload = provider.decode_id_token(token_data["id_token"])
-
-#     email = payload.get("email") or payload.get("preferred_username")
-
-#     oauth_payload = {
-#         "provider_user_id": payload["sub"],
-#         "email": email,
-#         "name": payload.get("name"),
-#         "picture": None
-#     }
-
-#     flow = state_data["flow"]
-
-#     if flow == "login":
-
-#         user = service.handle_microsoft_oauth_login(
-#             provider="microsoft",
-#             payload=oauth_payload
-#         )
-
-#         return service.create_session(
-#             user,
-#             user_agent=request.headers.get("user-agent"),
-#             ip_address=request.client.host
-#         )
-
-#     if flow == "link":
-
-#         return service.link_oauth_account(
-#             state_data["user_id"],
-#             provider="microsoft",
-#             payload=oauth_payload
-#         )
 
 @router.post("/magic-link")
 def request_magic_link(
@@ -556,6 +769,11 @@ def request_magic_link(
     request: Request,
     service: AuthService = Depends(get_auth_service)
 ):
+    """
+    Send magic login link to email.
+
+    Enables passwordless authentication.
+    """
 
     ip = (
         request.headers.get("x-forwarded-for")
@@ -576,6 +794,11 @@ def magic_login(
     request: Request,
     service: AuthService = Depends(get_auth_service)
 ):
+    """
+    Login using magic link token.
+
+    Creates authenticated session.
+    """
     ip = (
         request.headers.get("x-forwarded-for")
         or (request.client.host if request.client else None)
@@ -595,6 +818,11 @@ def approve_login(
     request: Request,
     service: AuthService = Depends(get_auth_service)
 ):
+    """
+    Approve login request.
+
+    Used for secure login confirmation (e.g., email approval flow).
+    """
     ip = (
         request.headers.get("x-forwarded-for")
         or (request.client.host if request.client else None)
@@ -610,6 +838,13 @@ def approve_login(
 
 @router.post("/request-phone-otp")
 def request_phone_otp(data: RequestPhoneOTPRequest, request: Request):
+    """
+    Send OTP to phone number.
+
+    Notes:
+    - Rate limited
+    - Delivered via SMS provider
+    """
 
     identifier = f"phone:{data.phone}"
 
@@ -652,6 +887,13 @@ def login_phone_otp(
     request: Request,
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Login using phone OTP.
+
+    Notes:
+    - Auto-creates user if not registered
+    - Supports 2FA if enabled
+    """
 
     identifier = f"phone:{data.phone}"
 
@@ -707,6 +949,11 @@ def setup_2fa(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """
+    Setup 2FA using TOTP.
+
+    Returns secret and QR code for authenticator apps.
+    """
 
     totp_repo = TOTPRepository(db)
 
@@ -741,6 +988,11 @@ def verify_2fa(
     db: Session = Depends(get_db),
     recovery_code_service: RecoveryCodeService = Depends(get_recovery_code_service),
 ):
+    """
+    Verify and enable 2FA.
+
+    Returns recovery codes on success.
+    """
 
     totp_repo = TOTPRepository(db)
 
@@ -766,6 +1018,14 @@ def login_2fa(
     db: Session = Depends(get_db),
     service: AuthService = Depends(get_auth_service),
 ):
+    """
+    Complete login using 2FA code.
+
+    Requires valid MFA challenge.
+
+    Notes:
+    - Rate limited attempts
+    """
 
     totp_repo = TOTPRepository(db)
     totp_service = TOTPService()
@@ -829,6 +1089,11 @@ def generate_recovery_codes(
     service: AuthService = Depends(get_auth_service),
     recovery_code_service: RecoveryCodeService = Depends(get_recovery_code_service),
 ):
+    """
+    Generate recovery codes for 2FA.
+
+    Invalidates existing codes.
+    """
 
     # delete existing codes
     service.recovery_code_repo.delete_by_user(current_user.id)
@@ -846,6 +1111,11 @@ def login_with_recovery_code(
     service: AuthService = Depends(get_auth_service),
     recovery_code_service: RecoveryCodeService = Depends(get_recovery_code_service),
 ):
+    """
+    Login using recovery code.
+
+    Fallback when authenticator is unavailable.
+    """
 
     # -----------------------------
     # 1️⃣ Check attempt limits
@@ -926,6 +1196,11 @@ def regenerate_codes(
     service: AuthService = Depends(get_auth_service),
     recovery_code_service: RecoveryCodeService = Depends(get_recovery_code_service),
 ):
+    """
+    Regenerate recovery codes.
+
+    Deletes old codes and issues new ones.
+    """
     service.recovery_code_repo.delete_by_user(current_user.id)
 
     codes = recovery_code_service.generate_codes(current_user.id)

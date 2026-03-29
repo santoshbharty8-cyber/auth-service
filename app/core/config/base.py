@@ -19,11 +19,15 @@ class BaseConfig(BaseSettings):
     ENV: str = "development"
     DEBUG: bool = False
 
+    BASE_URL: Optional[str] = None
     # -------------------------
     # Database
     # -------------------------
     DATABASE_URL: Optional[str] = None
-    
+    ADMIN_EMAIL: str = "admin@test.com"
+    ADMIN_PASSWORD: str = "Admin@123"
+    RP_ID: Optional[str] = None
+
     TEST_DATABASE_URL: str = "sqlite:///./test.db"
 
     # -------------------------
@@ -44,6 +48,13 @@ class BaseConfig(BaseSettings):
     SMTP_PORT: Optional[int] = None
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
+    
+    
+    MAILTRAP_HOST: Optional[str] = None
+    MAILTRAP_PORT: Optional[str] = None
+    MAILTRAP_USERNAME: Optional[str] = None
+    MAILTRAP_PASSWORD: Optional[str] = None
+    MAIL_FROM: Optional[str] = None
 
     # -------------------------
     # JWT Configuration

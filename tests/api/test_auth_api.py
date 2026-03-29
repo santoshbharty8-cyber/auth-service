@@ -129,7 +129,9 @@ def test_oauth_google_and_github_callback_flows(client, mock_auth_service, monke
         current_user=user,
         service=mock_auth_service,
     )
-    assert hasattr(result, 'status_code')
+    
+    assert 'redirect_url' in result
+
 
     mock_auth_service.start_github_oauth.return_value = "https://github.com/oauth"
     result = __import__('app.api.auth', fromlist=['github_login']).github_login(
@@ -141,7 +143,7 @@ def test_oauth_google_and_github_callback_flows(client, mock_auth_service, monke
         current_user=user,
         service=mock_auth_service,
     )
-    assert hasattr(result, 'status_code')
+    assert 'redirect_url' in result
 
     # Google login flow
     def mock_consume_state_login(redis, state):
