@@ -35,6 +35,7 @@ from app.security.token_utils import generate_refresh_token, hash_token
 from app.services.audit_service import AuditService
 from app.services.mfa_challenge_service import MFAChallengeService
 from app.cache.redis_client import redis_client
+from app.utils.oauth_config import get_oauth_redirect_uri
 
 
 
@@ -533,6 +534,8 @@ class AuthService:
     
     
     def start_google_oauth(self, flow: str, user_id: str | None = None):
+        
+        redirect_uri = get_oauth_redirect_uri("google")
 
         state = OAuthHelper.generate_state()
 
@@ -552,7 +555,7 @@ class AuthService:
         url = (
             f"{settings.GOOGLE_OAUTH_URL}"
             f"?client_id={settings.GOOGLE_CLIENT_ID}"
-            f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
+            f"&redirect_uri={redirect_uri}"
             f"&response_type=code"
             f"&scope=openid email profile"
             f"&state={state}"
@@ -669,6 +672,8 @@ class AuthService:
     
     
     def start_github_oauth(self, flow: str, user_id=None):
+        
+        redirect_uri = get_oauth_redirect_uri("github")
 
         state = OAuthHelper.generate_state()
 
@@ -687,7 +692,7 @@ class AuthService:
         url = (
             f"{settings.GITHUB_OAUTH_URL}"
             f"?client_id={settings.AUTH_GITHUB_CLIENT_ID}"
-            f"&redirect_uri={settings.GITHUB_REDIRECT_URI}"
+            f"&redirect_uri={redirect_uri}"
             f"&scope=user:email"
             f"&state={state}"
             f"&code_challenge={challenge}"

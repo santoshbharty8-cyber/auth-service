@@ -87,7 +87,6 @@ class BaseConfig(BaseSettings):
     # -------------------------------
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/oauth/google/callback"
     GOOGLE_OAUTH_URL: str = "https://accounts.google.com/o/oauth2/v2/auth"
     GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
 
@@ -97,8 +96,6 @@ class BaseConfig(BaseSettings):
 
     AUTH_GITHUB_CLIENT_ID: Optional[str] = None
     AUTH_GITHUB_CLIENT_SECRET: Optional[str] = None
-
-    GITHUB_REDIRECT_URI: str = "http://localhost:8000/auth/oauth/github/callback"
 
     GITHUB_OAUTH_URL: str = "https://github.com/login/oauth/authorize"
     GITHUB_TOKEN_URL: str = "https://github.com/login/oauth/access_token"
@@ -196,3 +193,4 @@ class BaseConfig(BaseSettings):
         env_file=f".env.{os.getenv('ENV', 'development')}",
         extra="allow",
     )
+    
