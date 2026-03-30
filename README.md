@@ -4,6 +4,26 @@ A **production-ready authentication system** built using **FastAPI**, deployed o
 
 ---
 
+## 🚀 Live Demo
+- [https://auth-service-production-ea86.up.railway.app/docs](https://auth-service-production-ea86.up.railway.app/docs)
+
+### 🔗 Direct Demo (Recommended)
+- [https://auth-service-production-ea86.up.railway.app/webauthn/demo](https://auth-service-production-ea86.up.railway.app/webauthn/demo)
+
+## 🧪 Webauthn Demo Flow
+1. Login (Email + Password)
+2. If 2FA enabled → enter OTP
+3. Register Passkey (biometric/device)
+4. Login using Passkey
+
+## 🛡️ Admin Demo Credentials
+- Email: [admin@test.com](mailto:admin@test.com)
+- Password: Admin@123
+
+⚠️ Demo credentials only
+
+--- 
+
 ## 🏷️ Badges
 
 <p align="center">
@@ -14,6 +34,10 @@ A **production-ready authentication system** built using **FastAPI**, deployed o
   <img src="https://img.shields.io/badge/Monitoring-Prometheus%20%2B%20Grafana-orange?style=for-the-badge&logo=grafana" />
 </p>
 
+![Tests](https://github.com/santoshbharty8-cyber/auth-service/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/santoshbharty8-cyber/auth-service/main/coverage-badge.json)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 ---
 
 ## 🧠 What This Project Demonstrates
