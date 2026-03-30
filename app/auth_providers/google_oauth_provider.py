@@ -12,6 +12,7 @@ from app.repositories.oauth_repository import OAuthRepository
 from app.models import User
 from app.models.oauth_account import OAuthAccount
 from app.core.config import settings
+from app.utils.oauth_config import get_oauth_redirect_uri
 
 
 class GoogleOAuthProvider:
@@ -85,6 +86,8 @@ class GoogleOAuthProvider:
         return user
 
     def exchange_code_for_token(self, code, code_verifier):
+        
+        redirect_uri = get_oauth_redirect_uri("google")
 
         with httpx.Client() as client:
 
@@ -94,7 +97,7 @@ class GoogleOAuthProvider:
                     "code": code,
                     "client_id": settings.GOOGLE_CLIENT_ID,
                     "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                    "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                    "redirect_uri": redirect_uri,
                     "grant_type": "authorization_code",
                     "code_verifier": code_verifier
                 },

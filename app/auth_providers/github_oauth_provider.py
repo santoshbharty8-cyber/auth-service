@@ -7,6 +7,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.oauth_repository import OAuthRepository
 from app.models import User
 from app.models.oauth_account import OAuthAccount
+from app.utils.oauth_config import get_oauth_redirect_uri
 
 
 class GitHubOAuthProvider:
@@ -20,6 +21,8 @@ class GitHubOAuthProvider:
         pass
     
     async def exchange_code(self, code, code_verifier):
+        
+        redirect_uri = get_oauth_redirect_uri("github")
 
         async with httpx.AsyncClient() as client:
 
@@ -30,7 +33,7 @@ class GitHubOAuthProvider:
                     "client_id": settings.AUTH_GITHUB_CLIENT_ID,
                     "client_secret": settings.AUTH_GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": settings.GITHUB_REDIRECT_URI,
+                    "redirect_uri": redirect_uri,
                     "code_verifier": code_verifier
                 }
             )
