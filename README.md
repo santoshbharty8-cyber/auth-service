@@ -34,10 +34,23 @@ A **production-ready authentication system** built using **FastAPI**, deployed o
   <img src="https://img.shields.io/badge/Monitoring-Prometheus%20%2B%20Grafana-orange?style=for-the-badge&logo=grafana" />
 </p>
 
-![Tests](https://github.com/santoshbharty8-cyber/auth-service/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/santoshbharty8-cyber/auth-service/main/coverage-badge.json)
-![Python](https://img.shields.io/badge/python-3.11-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+--- 
+## 🚀 Project Status
+<p align="center">
+  <a href="https://github.com/santoshbharty8-cyber/auth-service/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests" />
+  </a>
+  <a href="https://github.com/santoshbharty8-cyber/auth-service">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/santoshbharty8-cyber/auth-service/main/coverage-badge.json&style=for-the-badge" alt="Coverage" />
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python" alt="Python 3.11" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
+  </a>
+</p>
+
 ---
 
 ## 🧠 What This Project Demonstrates
