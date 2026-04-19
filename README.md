@@ -137,7 +137,7 @@ auth-service/
 
 **Clone repo**
 ```bash  
-git clone https://github.com/yourusername/auth-service.git
+git clone https://github.com/santoshbharty8-cyber/auth-service.git
 cd auth-service
 ``` 
 **Setup environment**
